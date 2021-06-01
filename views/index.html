@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hello world</title>
+  </head>
+    <script src = "/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+    <script type="text/babel">
+      class Index extends React.Component {
+        constructor() {
+          super()
+          this.state = {
+            sockedId: null,
+            hosted: false,
+            hostedByMe: false,
+            roomId: '1234',
+            started: false,
+            token: false,
+            users: []
+          }
+          this.socket = null
+        }
+
+        componentDidMount() {
+          const socket = io()
+          socket.on('connect', ()=>{
+            this.socket = socket
+            this.setState({ sockedId: socket.id })
+          })
+
+          socket.on('COUNT', (room)=>{
+            this.setState({ users: room.users })
+          })
+
+          socket.on('STARTED', (status)=>{
+            this.setState({ started: status })
+          })
+
+          socket.on('TOKEN', (token)=>{
+            this.setState({ token: true })
+            console.log(token)
+          })
+        }
+
+        createRoom = ()=>{
+          this.socket.emit('JOIN_ROOM', '1234', (room)=>{
+            this.setState({ users: room.users, hosted: true, hostedByMe: true })
+          })
+        }
+
+        joinRoom = (id)=>{
+          this.socket.emit('JOIN_ROOM', id, (room)=>{
+            this.setState({ users: room.users, hosted: true })
+          })
+        }
+
+        startGame = ()=>{
+          this.socket.emit('START_GAME', this.state.roomId)
+          this.setState({ started: true })
+        }
+
+        putCard = ()=>{
+          this.socket.emit('PUT_CARD', this.state.roomId)
+          this.setState({ token: false })
+        }
+
+        render() {
+          const { hosted, hostedByMe, started, users, token } = this.state
+          return (
+            <div>
+              { !hosted?
+                <div>
+                  <button onClick={ ()=> this.createRoom() }>Host Room</button>
+                  <button onClick={ ()=> this.joinRoom('1234') }>Join Room</button>
+                </div>
+              :null }
+              { hostedByMe && !started?
+                <button onClick={ ()=> this.startGame() }>Start</button>
+              :null }
+              { users && users.length > 0?
+                users.map((e, i)=>(
+                  <button onClick={ ()=> this.putCard() }>Player { i } { token? 'Yes': 'No' }</button>
+                ))
+              :null }
+            </div>
+          )
+        }
+      }
+
+      ReactDOM.render(<Index />, document.getElementById('root'))
+    </script>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
